@@ -97,7 +97,7 @@ Simple approach:
 
 ---
 
-**Me:** What's the UI need to show?
+Me: What's the UI need to show?
 
 - Summary cards: count per gap type
 - Financial impact: total discrepancy in dollars
@@ -107,4 +107,4 @@ Simple approach:
 
 ---
 
-**Me:** Ok let's build it.
+Me: Ok let's build it.
