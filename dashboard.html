@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OneLab — Payments Reconciliation</title>
+<style>
+/* ── reset ── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#070b12;color:#e2e8f0;min-height:100vh;font-size:14px}
+
+/* ── header ── */
+.header{background:#0d1117;border-bottom:1px solid #1e2433;padding:0 32px;height:56px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
+.header-logo{display:flex;align-items:center;gap:10px}
+.header-logo h1{font-size:1rem;font-weight:700;color:#f1f5f9;letter-spacing:-.01em}
+.header-logo span{font-size:.72rem;color:#475569;background:#1e2433;padding:2px 8px;border-radius:99px;margin-left:4px}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.header-ts{font-size:.72rem;color:#475569}
+.btn-export{padding:6px 14px;background:transparent;color:#34d399;border:1px solid #065f46;border-radius:6px;cursor:pointer;font-size:.75rem;font-weight:600;transition:all .15s}
+.btn-export:hover{background:#065f46;color:#fff}
+
+/* ── tabs ── */
+.tab-bar{background:#0d1117;border-bottom:1px solid #1e2433;padding:0 32px;display:flex;gap:0}
+.tab{padding:12px 20px;font-size:.82rem;font-weight:600;color:#475569;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;display:flex;align-items:center;gap:6px}
+.tab:hover{color:#94a3b8}
+.tab.active{color:#60a5fa;border-bottom-color:#60a5fa}
+.tab-count{background:#1e2433;color:#64748b;border-radius:99px;padding:1px 7px;font-size:.65rem;font-weight:700}
+.tab.active .tab-count{background:#1e3a5f;color:#60a5fa}
+
+/* ── page wrapper ── */
+.page{padding:28px 32px;max-width:1600px}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* ── section header ── */
+.section-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;margin-top:28px}
+.section-hd:first-child{margin-top:0}
+.section-title{font-size:.78rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:8px}
+.section-title::before{content:'';display:block;width:3px;height:14px;background:#3b82f6;border-radius:2px}
+.pill{background:#1e2433;color:#64748b;border-radius:99px;padding:2px 9px;font-size:.65rem;font-weight:600}
+
+/* ── KPI cards ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:0}
+.kpi{background:#0d1117;border:1px solid #1e2433;border-radius:10px;padding:16px 18px;cursor:pointer;transition:border-color .15s,transform .1s}
+.kpi:hover{border-color:#334155;transform:translateY(-1px)}
+.kpi .k-lbl{font-size:.65rem;color:#475569;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .k-val{font-size:1.8rem;font-weight:800;line-height:1}
+.kpi .k-sub{font-size:.65rem;color:#334155;margin-top:5px}
+.kpi.c-total .k-val{color:#f87171}
+.kpi.c-high  .k-val{color:#f87171}
+.kpi.c-med   .k-val{color:#fbbf24}
+.kpi.c-low   .k-val{color:#34d399}
+.kpi.c-blue  .k-val{color:#60a5fa}
+.kpi.c-orange .k-val{color:#fb923c}
+.kpi.c-purple .k-val{color:#a78bfa}
+.kpi.c-green  .k-val{color:#34d399}
+.kpi.c-yellow .k-val{color:#fbbf24}
+
+/* ── impact strip ── */
+.impact-strip{background:#0d1117;border:1px solid #1e2433;border-radius:10px;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:0;overflow:hidden}
+.impact-item{padding:16px 20px;border-right:1px solid #1e2433;display:flex;flex-direction:column;gap:5px}
+.impact-item:last-child{border-right:none}
+.impact-item .i-lbl{font-size:.63rem;color:#475569;text-transform:uppercase;letter-spacing:.07em}
+.impact-item .i-val{font-size:1.1rem;font-weight:700}
+.i-red{color:#f87171}.i-green{color:#34d399}.i-yellow{color:#fbbf24}.i-blue{color:#60a5fa}.i-muted{color:#94a3b8}
+
+/* ── chart ── */
+.chart-box{background:#0d1117;border:1px solid #1e2433;border-radius:10px;padding:20px 24px}
+.chart-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.chart-hd .title{font-size:.75rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.07em}
+.chart-legend{display:flex;gap:14px}
+.chart-legend span{font-size:.65rem;color:#64748b;display:flex;align-items:center;gap:4px}
+.chart-legend span::before{content:'';display:inline-block;width:8px;height:8px;border-radius:2px}
+.leg-high::before{background:#f87171}
+.leg-med::before{background:#fbbf24}
+.leg-low::before{background:#34d399}
+.chart-bars{display:flex;align-items:flex-end;gap:4px;height:90px;overflow-x:auto;padding-bottom:2px}
+.bar-col{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:26px;flex-shrink:0}
+.bar-seg{width:20px;border-radius:2px 2px 0 0;transition:opacity .15s;cursor:pointer}
+.bar-seg:hover{opacity:.7}
+.bar-date{font-size:.55rem;color:#334155;margin-top:4px;white-space:nowrap}
+
+/* ── explain cards ── */
+.explain-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.explain-card{background:#0d1117;border:1px solid #1e2433;border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.explain-card .e-type{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em}
+.explain-card .e-text{font-size:.78rem;color:#64748b;line-height:1.55}
+
+/* ── upload zone ── */
+.upload-zone{background:#0d1117;border:1px dashed #1e2433;border-radius:10px;padding:18px 24px;display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.upload-zone .uz-title{font-size:.78rem;font-weight:700;color:#64748b;white-space:nowrap}
+.upload-zone label{font-size:.75rem;color:#475569;display:flex;flex-direction:column;gap:4px;cursor:pointer}
+.upload-zone input[type=file]{font-size:.7rem;color:#334155}
+.upload-zone .uz-hint{font-size:.65rem;color:#334155;font-family:'Courier New',monospace}
+.btn-upload{padding:8px 18px;background:#1d4ed8;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:.78rem;font-weight:700;transition:background .15s}
+.btn-upload:hover{background:#2563eb}
+.uz-or{font-size:.7rem;color:#334155}
+
+/* ── toolbar ── */
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.filter-group{display:flex;gap:4px;flex-wrap:wrap}
+.f-btn{padding:5px 12px;border-radius:6px;border:1px solid #1e2433;background:#0d1117;color:#475569;cursor:pointer;font-size:.72rem;font-weight:600;transition:all .15s;white-space:nowrap}
+.f-btn:hover{border-color:#334155;color:#94a3b8}
+.f-btn.active{background:#1e2433;color:#f1f5f9;border-color:#334155}
+.sev-divider{width:1px;height:20px;background:#1e2433;margin:0 4px}
+.sev-HIGH{color:#f87171!important;border-color:#7f1d1d!important}
+.sev-HIGH.active{background:#3b0000!important}
+.sev-MEDIUM{color:#fbbf24!important;border-color:#78350f!important}
+.sev-MEDIUM.active{background:#3b2f00!important}
+.sev-LOW{color:#34d399!important;border-color:#064e3b!important}
+.sev-LOW.active{background:#0f2e1a!important}
+.toolbar-right{margin-left:auto;display:flex;gap:8px}
+
+/* ── table ── */
+.table-wrap{border-radius:10px;overflow:hidden;border:1px solid #1e2433}
+table{width:100%;border-collapse:collapse;background:#0d1117}
+thead tr{background:#070b12}
+th{padding:10px 14px;text-align:left;font-size:.63rem;color:#334155;text-transform:uppercase;letter-spacing:.07em;cursor:pointer;user-select:none;white-space:nowrap;border-bottom:1px solid #1e2433}
+th:hover{color:#64748b}
+th .sort-arrow{margin-left:4px;opacity:.4}
+td{padding:10px 14px;border-top:1px solid #111827;font-size:.78rem;vertical-align:middle}
+tr:hover td{background:#0a0f1a}
+.empty-row td{text-align:center;padding:48px;color:#1e2433;font-size:.85rem}
+
+/* ── badges ── */
+.badge{padding:3px 9px;border-radius:5px;font-size:.62rem;font-weight:800;white-space:nowrap;letter-spacing:.03em}
+.b-NMS{background:#1e3a5f;color:#60a5fa}
+.b-RD{background:#3b2f00;color:#fbbf24}
+.b-AR{background:#3b1f00;color:#fb923c}
+.b-DUP{background:#3b0000;color:#f87171}
+.b-OR{background:#2d1b4e;color:#a78bfa}
+.b-UN{background:#0f2e1a;color:#34d399}
+.b-MATCHED{background:#0f2e1a;color:#34d399}
+.b-MISMATCH{background:#3b2f00;color:#fbbf24}
+.b-UNSETTLED{background:#1a1a2e;color:#818cf8}
+.b-ORPHAN{background:#2d1b4e;color:#a78bfa}
+.b-DUPLICATE{background:#3b0000;color:#f87171}
+
+/* ── inline values ── */
+.mono{font-family:'Courier New',monospace;font-size:.72rem;color:#475569}
+.amt{font-weight:600;color:#e2e8f0}
+.amt-neg{font-weight:600;color:#a78bfa}
+.diff-pos{color:#f87171;font-weight:700}
+.diff-neg{color:#a78bfa;font-weight:700}
+.diff-zero{color:#1e2433}
+.lag-ok{color:#334155}
+.lag-warn{color:#fbbf24;font-weight:600}
+.sev-HIGH{color:#f87171;font-weight:800;font-size:.7rem}
+.sev-MEDIUM{color:#fbbf24;font-weight:700;font-size:.7rem}
+.sev-LOW{color:#34d399;font-size:.7rem}
+.detail-cell{color:#334155;font-size:.72rem;max-width:260px;line-height:1.4}
+
+/* ── ledger stats ── */
+.ledger-kpi{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.lkpi{background:#0d1117;border:1px solid #1e2433;border-radius:8px;padding:12px 16px}
+.lkpi .lk-lbl{font-size:.62rem;color:#334155;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.lkpi .lk-val{font-size:1.3rem;font-weight:800}
+
+/* ── ledger toolbar ── */
+.ledger-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.search-box{padding:7px 13px;background:#0d1117;border:1px solid #1e2433;border-radius:7px;color:#e2e8f0;font-size:.78rem;width:280px;outline:none;transition:border-color .15s}
+.search-box:focus{border-color:#334155}
+.status-select{padding:7px 12px;background:#0d1117;border:1px solid #1e2433;border-radius:7px;color:#94a3b8;font-size:.78rem;outline:none;cursor:pointer}
+.row-count{font-size:.72rem;color:#334155}
+
+/* ── spacing helpers ── */
+.mt16{margin-top:16px}
+.mt24{margin-top:24px}
+.mt28{margin-top:28px}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-logo">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.2">
+      <rect x="2" y="3" width="20" height="14" rx="2"/>
+      <path d="M8 21h8M12 17v4"/><path d="M7 8h10M7 12h6"/>
+    </svg>
+    <h1>Payments Reconciliation <span>January 2024</span></h1>
+  </div>
+  <div class="header-right">
+    <span class="header-ts" id="ts"></span>
+    <button class="btn-export" onclick="exportCSV()">&#8595; Export Gaps</button>
+  </div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <div class="tab active" onclick="switchTab('gaps')">
+    Reconciliation Gaps <span class="tab-count" id="tc-gaps">—</span>
+  </div>
+  <div class="tab" onclick="switchTab('ledger')">
+    Full Ledger <span class="tab-count" id="tc-ledger">—</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ GAPS PANEL ═══════════════════════════ -->
+<div class="page">
+<div id="panel-gaps" class="tab-panel active">
+
+  <!-- Upload -->
+  <div class="upload-zone">
+    <span class="uz-title">Upload your own data</span>
+    <label>Transactions CSV
+      <input type="file" id="txnFile" accept=".csv">
+      <span class="uz-hint">txn_id, amount, created_at</span>
+    </label>
+    <label>Settlements CSV
+      <input type="file" id="setFile" accept=".csv">
+      <span class="uz-hint">ref_id, txn_id, amount, settled_at</span>
+    </label>
+    <button class="btn-upload" onclick="uploadAndReconcile()">Reconcile</button>
+    <span class="uz-or">or scroll down to see demo data</span>
+  </div>
+
+  <!-- KPI cards -->
+  <div class="section-hd mt24">
+    <div class="section-title">Overview</div>
+  </div>
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <!-- Impact strip -->
+  <div class="section-hd mt24">
+    <div class="section-title">Financial Impact</div>
+  </div>
+  <div class="impact-strip" id="impactStrip"></div>
+
+  <!-- Chart + Legend -->
+  <div class="section-hd mt24">
+    <div class="section-title">Gap Timeline</div>
+  </div>
+  <div class="chart-box">
+    <div class="chart-hd">
+      <span class="title">Gaps by transaction date</span>
+      <div class="chart-legend">
+        <span class="leg-high">High</span>
+        <span class="leg-med">Medium</span>
+        <span class="leg-low">Low</span>
+      </div>
+    </div>
+    <div class="chart-bars" id="chart"></div>
+  </div>
+
+  <!-- Explain cards -->
+  <div class="section-hd mt24">
+    <div class="section-title">What Each Gap Means <span class="pill" id="explainCount"></span></div>
+  </div>
+  <div class="explain-grid" id="explains"></div>
+
+  <!-- Gap table -->
+  <div class="section-hd mt24">
+    <div class="section-title">Gap Details <span class="pill" id="rowCount"></span></div>
+  </div>
+  <div class="toolbar mt16" style="margin-bottom:12px">
+    <div class="filter-group" id="typeFilters"></div>
+    <div class="sev-divider"></div>
+    <div class="filter-group" id="sevFilters"></div>
+    <div class="toolbar-right">
+      <button class="btn-export" onclick="exportCSV()">&#8595; Export CSV</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th onclick="sortBy('type')">Gap Type</th>
+        <th onclick="sortBy('severity')">Risk</th>
+        <th onclick="sortBy('txn_id')">Transaction ID</th>
+        <th onclick="sortBy('txn_amount')">Txn Amount</th>
+        <th onclick="sortBy('settle_amount')">Settled</th>
+        <th onclick="sortBy('diff')">Diff</th>
+        <th onclick="sortBy('lag_days')">Lag</th>
+        <th onclick="sortBy('txn_date')">Txn Date</th>
+        <th>Detail</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════ LEDGER PANEL ═══════════════════════════ -->
+<div id="panel-ledger" class="tab-panel">
+
+  <!-- Ledger KPIs -->
+  <div class="section-hd">
+    <div class="section-title">Ledger Summary</div>
+  </div>
+  <div class="ledger-kpi" id="ledgerKpi"></div>
+
+  <!-- Ledger toolbar -->
+  <div class="ledger-toolbar mt24" style="margin-bottom:12px">
+    <input class="search-box" id="ledgerSearch" placeholder="Search by txn ID, ref ID, amount or date..." oninput="renderLedger()">
+    <select class="status-select" id="ledgerStatus" onchange="renderLedger()">
+      <option value="ALL">All Statuses</option>
+      <option value="MATCHED">Matched</option>
+      <option value="MISMATCH">Mismatch</option>
+      <option value="UNSETTLED">Unsettled</option>
+      <option value="ORPHAN_REFUND">Orphan Refund</option>
+      <option value="DUPLICATE">Duplicate</option>
+    </select>
+    <span class="row-count" id="ledgerCount"></span>
+    <div style="margin-left:auto">
+      <button class="btn-export" onclick="exportLedgerCSV()">&#8595; Export Ledger CSV</button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th onclick="sortLedger('txn_id')">Transaction ID</th>
+        <th onclick="sortLedger('txn_amount')">Amount</th>
+        <th onclick="sortLedger('created_at')">Transaction Date</th>
+        <th onclick="sortLedger('ref_id')">Settlement Ref</th>
+        <th onclick="sortLedger('settle_amount')">Settled Amount</th>
+        <th onclick="sortLedger('settled_at')">Settlement Date</th>
+        <th onclick="sortLedger('diff')">Diff</th>
+        <th onclick="sortLedger('status')">Status</th>
+      </tr></thead>
+      <tbody id="ledgerBody"></tbody>
+    </table>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ── state ── */
+let all=[], activeType='ALL', activeSev=new Set(['HIGH','MEDIUM','LOW']), sortCol='severity', sortAsc=true;
+
+const TYPE_CLS={NEXT_MONTH_SETTLEMENT:'b-NMS',ROUNDING_DIFF:'b-RD',AGGREGATE_ROUNDING:'b-AR',
+                DUPLICATE_SETTLEMENT:'b-DUP',ORPHAN_REFUND:'b-OR',UNSETTLED:'b-UN'};
+const TYPE_COLOR={NEXT_MONTH_SETTLEMENT:'#60a5fa',ROUNDING_DIFF:'#fbbf24',AGGREGATE_ROUNDING:'#fb923c',
+                  DUPLICATE_SETTLEMENT:'#f87171',ORPHAN_REFUND:'#a78bfa',UNSETTLED:'#34d399'};
+const KPI_CLS={NEXT_MONTH_SETTLEMENT:'c-blue',ROUNDING_DIFF:'c-yellow',AGGREGATE_ROUNDING:'c-orange',
+               DUPLICATE_SETTLEMENT:'c-high',ORPHAN_REFUND:'c-purple',UNSETTLED:'c-green'};
+
+/* ── load ── */
+async function load(url='/api/gaps'){
+  const r=await fetch(url); all=await r.json();
+  document.getElementById('ts').textContent='Last refreshed '+new Date().toLocaleTimeString();
+  document.getElementById('tc-gaps').textContent=all.length;
+  render();
+}
+
+function render(){
+  renderKpi(); renderImpact(); renderChart();
+  renderExplains(); renderFilters(); renderTable();
+}
+
+/* ── KPI grid ── */
+function renderKpi(){
+  const counts={}, sev={HIGH:0,MEDIUM:0,LOW:0};
+  all.forEach(g=>{counts[g.type]=(counts[g.type]||0)+1; sev[g.severity]=(sev[g.severity]||0)+1;});
+  const cards=[
+    {lbl:'Total Gaps',val:all.length,sub:'all types',cls:'c-total',f:null},
+    {lbl:'High Risk',val:sev.HIGH,sub:'needs immediate action',cls:'c-high',f:'sev:HIGH'},
+    {lbl:'Medium Risk',val:sev.MEDIUM,sub:'review this week',cls:'c-med',f:'sev:MEDIUM'},
+    {lbl:'Low Risk',val:sev.LOW,sub:'monitor only',cls:'c-low',f:'sev:LOW'},
+    ...Object.entries(counts).map(([k,v])=>({lbl:k.replace(/_/g,' '),val:v,sub:'gaps found',cls:KPI_CLS[k]||'c-blue',f:'type:'+k}))
+  ];
+  document.getElementById('kpiGrid').innerHTML=cards.map(c=>
+    `<div class="kpi ${c.cls}" onclick="cardFilter('${c.f}')">
+      <div class="k-lbl">${c.lbl}</div>
+      <div class="k-val">${c.val}</div>
+      <div class="k-sub">${c.sub}</div>
+    </div>`
+  ).join('');
+}
+
+function cardFilter(f){
+  if(!f){activeType='ALL';activeSev=new Set(['HIGH','MEDIUM','LOW']);}
+  else if(f.startsWith('sev:')){activeSev=new Set([f.slice(4)]);}
+  else if(f.startsWith('type:')){activeType=f.slice(5);}
+  renderFilters(); renderTable();
+}
+
+/* ── impact strip ── */
+function renderImpact(){
+  const td=all.reduce((s,g)=>s+(g.diff||0),0);
+  const over=all.filter(g=>(g.diff||0)>0).reduce((s,g)=>s+g.diff,0);
+  const under=all.filter(g=>(g.diff||0)<0).reduce((s,g)=>s+g.diff,0);
+  const unrec=all.filter(g=>['UNSETTLED','ORPHAN_REFUND'].includes(g.type)).reduce((s,g)=>s+Math.abs(g.txn_amount||0),0);
+  const hi=all.filter(g=>g.severity==='HIGH').length;
+  const lagArr=all.filter(g=>g.lag_days!=null);
+  const lag=lagArr.length?lagArr.reduce((s,g)=>s+g.lag_days,0)/lagArr.length:0;
+  const items=[
+    {lbl:'Net Discrepancy',val:(td>=0?'+':'')+'$'+Math.abs(td).toFixed(4),cls:td>0?'i-red':td<0?'i-green':'i-yellow'},
+    {lbl:'Over-Settled (owed back)',val:'+$'+over.toFixed(2),cls:'i-red'},
+    {lbl:'Under-Settled (missing)',val:'-$'+Math.abs(under).toFixed(2),cls:'i-green'},
+    {lbl:'Unreconciled Value',val:'$'+unrec.toFixed(2),cls:'i-red'},
+    {lbl:'High Risk Gaps',val:hi,cls:hi>0?'i-red':'i-green'},
+    {lbl:'Avg Settlement Lag',val:lag.toFixed(1)+' days',cls:lag>2?'i-yellow':'i-green'},
+  ];
+  document.getElementById('impactStrip').innerHTML=items.map(i=>
+    `<div class="impact-item"><div class="i-lbl">${i.lbl}</div><div class="i-val ${i.cls}">${i.val}</div></div>`
+  ).join('');
+}
+
+/* ── chart ── */
+function renderChart(){
+  const byDay={};
+  all.forEach(g=>{
+    const d=(g.txn_date||'').slice(0,10);
+    if(!d) return;
+    if(!byDay[d]) byDay[d]={HIGH:0,MEDIUM:0,LOW:0};
+    byDay[d][g.severity]++;
+  });
+  const days=Object.keys(byDay).sort();
+  if(!days.length){document.getElementById('chart').innerHTML='<span style="color:#1e2433;font-size:.8rem">No data</span>';return;}
+  const mx=Math.max(...days.map(d=>byDay[d].HIGH+byDay[d].MEDIUM+byDay[d].LOW));
+  const H=80;
+  document.getElementById('chart').innerHTML=days.map(d=>{
+    const tot=byDay[d].HIGH+byDay[d].MEDIUM+byDay[d].LOW;
+    const hh=Math.round((byDay[d].HIGH/mx)*H)||0;
+    const mh=Math.round((byDay[d].MEDIUM/mx)*H)||0;
+    const lh=Math.round((byDay[d].LOW/mx)*H)||0;
+    return `<div class="bar-col" title="${d}: ${tot} gap(s)">
+      ${byDay[d].HIGH?`<div class="bar-seg" style="height:${hh}px;background:#f87171" title="HIGH: ${byDay[d].HIGH}"></div>`:''}
+      ${byDay[d].MEDIUM?`<div class="bar-seg" style="height:${mh}px;background:#fbbf24" title="MED: ${byDay[d].MEDIUM}"></div>`:''}
+      ${byDay[d].LOW?`<div class="bar-seg" style="height:${lh}px;background:#34d399" title="LOW: ${byDay[d].LOW}"></div>`:''}
+      <div class="bar-date">${d.slice(5)}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ── explain cards ── */
+function renderExplains(){
+  const seen=new Set(all.map(g=>g.type));
+  document.getElementById('explains').innerHTML=[...seen].map(t=>{
+    const ex=all.find(g=>g.type===t);
+    return `<div class="explain-card">
+      <div class="e-type" style="color:${TYPE_COLOR[t]||'#64748b'}">${t.replace(/_/g,' ')}</div>
+      <div class="e-text">${ex&&ex.explanation?ex.explanation:'No description available.'}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('explainCount').textContent=seen.size+' types';
+}
+
+/* ── filters ── */
+function renderFilters(){
+  const types=['ALL',...new Set(all.map(g=>g.type))];
+  document.getElementById('typeFilters').innerHTML=types.map(t=>
+    `<button class="f-btn ${t===activeType?'active':''}" onclick="setType('${t}')">${t.replace(/_/g,' ')}</button>`
+  ).join('');
+  document.getElementById('sevFilters').innerHTML=['HIGH','MEDIUM','LOW'].map(s=>
+    `<button class="f-btn sev-${s} ${activeSev.has(s)?'active':''}" onclick="toggleSev('${s}')">${s}</button>`
+  ).join('');
+}
+
+function setType(t){activeType=t;renderFilters();renderTable();}
+function toggleSev(s){
+  if(activeSev.has(s)&&activeSev.size>1) activeSev.delete(s);
+  else activeSev.add(s);
+  renderFilters(); renderTable();
+}
+
+/* ── gap table ── */
+function sortBy(col){if(sortCol===col)sortAsc=!sortAsc;else{sortCol=col;sortAsc=true;}renderTable();}
+
+function renderTable(){
+  let rows=all.filter(g=>(activeType==='ALL'||g.type===activeType)&&activeSev.has(g.severity));
+  const dir=sortAsc?1:-1;
+  rows.sort((a,b)=>{const av=a[sortCol]??'',bv=b[sortCol]??'';return typeof av==='number'?(av-bv)*dir:String(av).localeCompare(String(bv))*dir;});
+  document.getElementById('rowCount').textContent=rows.length+' rows';
+  if(!rows.length){
+    document.getElementById('tbody').innerHTML='<tr class="empty-row"><td colspan="9">No gaps match the current filters</td></tr>';
+    return;
+  }
+  document.getElementById('tbody').innerHTML=rows.map(g=>{
+    const d=g.diff;
+    const dh=d==null?'<span class="diff-zero">—</span>':d===0?'<span class="diff-zero">$0.00</span>':`<span class="${d>0?'diff-pos':'diff-neg'}">${d>0?'+':''}$${Math.abs(d).toFixed(4)}</span>`;
+    const lh=g.lag_days==null?'<span class="diff-zero">—</span>':`<span class="${g.lag_days>2?'lag-warn':'lag-ok'}">${g.lag_days}d</span>`;
+    const sid=(g.txn_id||'').startsWith('BATCH:')?`<span style="color:#475569">${g.txn_id}</span>`:`<span class="mono">${(g.txn_id||'').substring(0,8)}&hellip;</span>`;
+    const tamt=g.txn_amount!=null?`<span class="${g.txn_amount<0?'amt-neg':'amt'}">$${Number(g.txn_amount).toFixed(2)}</span>`:'—';
+    const samt=g.settle_amount!=null?`<span class="amt">$${Number(g.settle_amount).toFixed(2)}</span>`:'—';
+    return `<tr>
+      <td><span class="badge ${TYPE_CLS[g.type]||''}">${g.type.replace(/_/g,' ')}</span></td>
+      <td><span class="sev-${g.severity}">${g.severity}</span></td>
+      <td>${sid}</td>
+      <td>${tamt}</td>
+      <td>${samt}</td>
+      <td>${dh}</td>
+      <td>${lh}</td>
+      <td><span class="mono">${(g.txn_date||'').replace('T',' ').slice(0,16)}</span></td>
+      <td class="detail-cell">${g.detail||''}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ── export gaps ── */
+function exportCSV(){
+  const rows=all.filter(g=>(activeType==='ALL'||g.type===activeType)&&activeSev.has(g.severity));
+  const cols=['type','severity','txn_id','txn_amount','settle_amount','diff','lag_days','txn_date','settle_date','detail'];
+  const lines=[cols.join(','),...rows.map(r=>cols.map(c=>{const v=r[c]??'';return String(v).includes(',')?`"${v}"`:v;}).join(','))];
+  dl(lines.join('\n'),'reconciliation_gaps.csv');
+}
+
+/* ── upload ── */
+async function uploadAndReconcile(){
+  const txnF=document.getElementById('txnFile').files[0], setF=document.getElementById('setFile').files[0];
+  if(!txnF||!setF){alert('Please select both CSV files.');return;}
+  const fd=new FormData(); fd.append('transactions',txnF); fd.append('settlements',setF);
+  const r=await fetch('/api/upload',{method:'POST',body:fd});
+  if(!r.ok){alert('Upload failed: '+await r.text());return;}
+  all=await r.json();
+  document.getElementById('ts').textContent='Uploaded '+new Date().toLocaleTimeString();
+  document.getElementById('tc-gaps').textContent=all.length;
+  render();
+}
+
+/* ══════════════════════════ LEDGER TAB ══════════════════════════ */
+let ledgerAll=[], lSortCol='created_at', lSortAsc=true;
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['gaps','ledger'][i]===name));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  if(name==='ledger'&&ledgerAll.length===0) loadLedger();
+}
+
+async function loadLedger(){
+  const r=await fetch('/api/ledger'); ledgerAll=await r.json();
+  document.getElementById('tc-ledger').textContent=ledgerAll.length;
+  renderLedgerKpi(); renderLedger();
+}
+
+function renderLedgerKpi(){
+  const matched  =ledgerAll.filter(r=>r.status==='MATCHED').length;
+  const mismatch =ledgerAll.filter(r=>r.status==='MISMATCH').length;
+  const unsettled=ledgerAll.filter(r=>r.status==='UNSETTLED').length;
+  const orphan   =ledgerAll.filter(r=>r.status==='ORPHAN_REFUND').length;
+  const dup      =ledgerAll.filter(r=>r.status==='DUPLICATE').length;
+  const txnTotal =ledgerAll.reduce((s,r)=>s+(r.txn_amount||0),0);
+  const setTotal =ledgerAll.reduce((s,r)=>s+(r.settle_amount||0),0);
+  const items=[
+    {lbl:'Total Rows',    val:ledgerAll.length, c:'#94a3b8'},
+    {lbl:'Matched',       val:matched,           c:'#34d399'},
+    {lbl:'Mismatch',      val:mismatch,          c:'#fbbf24'},
+    {lbl:'Unsettled',     val:unsettled,         c:'#818cf8'},
+    {lbl:'Orphan Refund', val:orphan,            c:'#a78bfa'},
+    {lbl:'Duplicate',     val:dup,               c:'#f87171'},
+    {lbl:'Total Txn Value',val:'$'+txnTotal.toFixed(2), c:'#94a3b8'},
+    {lbl:'Total Settled', val:'$'+setTotal.toFixed(2),  c:'#34d399'},
+  ];
+  document.getElementById('ledgerKpi').innerHTML=items.map(i=>
+    `<div class="lkpi"><div class="lk-lbl">${i.lbl}</div><div class="lk-val" style="color:${i.c}">${i.val}</div></div>`
+  ).join('');
+}
+
+function sortLedger(col){if(lSortCol===col)lSortAsc=!lSortAsc;else{lSortCol=col;lSortAsc=true;}renderLedger();}
+
+function renderLedger(){
+  const q=(document.getElementById('ledgerSearch').value||'').toLowerCase();
+  const st=document.getElementById('ledgerStatus').value;
+  let rows=ledgerAll.filter(r=>{
+    if(st!=='ALL'&&r.status!==st) return false;
+    if(q){
+      const hay=[(r.txn_id||''),(r.ref_id||''),(r.txn_amount||''),(r.settle_amount||''),(r.created_at||''),(r.settled_at||'')].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  const dir=lSortAsc?1:-1;
+  rows.sort((a,b)=>{const av=a[lSortCol]??'',bv=b[lSortCol]??'';return typeof av==='number'?(av-bv)*dir:String(av).localeCompare(String(bv))*dir;});
+  document.getElementById('ledgerCount').textContent=rows.length+' of '+ledgerAll.length+' rows';
+  if(!rows.length){
+    document.getElementById('ledgerBody').innerHTML='<tr class="empty-row"><td colspan="8">No rows match</td></tr>';
+    return;
+  }
+  const STATUS_CLS={MATCHED:'b-MATCHED',MISMATCH:'b-MISMATCH',UNSETTLED:'b-UNSETTLED',ORPHAN_REFUND:'b-ORPHAN',DUPLICATE:'b-DUPLICATE'};
+  document.getElementById('ledgerBody').innerHTML=rows.map(r=>{
+    const d=r.diff;
+    const dh=d==null?'<span class="diff-zero">—</span>':d===0?'<span class="diff-zero">$0.00</span>':`<span class="${d>0?'diff-pos':'diff-neg'}">${d>0?'+':''}$${Math.abs(d).toFixed(4)}</span>`;
+    const shortTxn=`<span class="mono" title="${r.txn_id}">${(r.txn_id||'').substring(0,8)}&hellip;</span>`;
+    const shortRef=r.ref_id?`<span class="mono" title="${r.ref_id}">${r.ref_id.substring(0,8)}&hellip;</span>`:'<span class="diff-zero">—</span>';
+    const settledAt=r.settled_at?`<span class="mono">${r.settled_at.replace('T',' ').slice(0,16)}</span>`:'<span class="diff-zero">—</span>';
+    const settleAmt=r.settle_amount!=null?`<span class="amt">$${Number(r.settle_amount).toFixed(2)}</span>`:'<span class="diff-zero">—</span>';
+    const txnAmt=`<span class="${r.txn_amount<0?'amt-neg':'amt'}">$${Number(r.txn_amount).toFixed(2)}</span>`;
+    return `<tr>
+      <td>${shortTxn}</td>
+      <td>${txnAmt}</td>
+      <td><span class="mono">${(r.created_at||'').replace('T',' ').slice(0,16)}</span></td>
+      <td>${shortRef}</td>
+      <td>${settleAmt}</td>
+      <td>${settledAt}</td>
+      <td>${dh}</td>
+      <td><span class="badge ${STATUS_CLS[r.status]||''}">${r.status.replace(/_/g,' ')}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function exportLedgerCSV(){
+  const q=(document.getElementById('ledgerSearch').value||'').toLowerCase();
+  const st=document.getElementById('ledgerStatus').value;
+  const rows=ledgerAll.filter(r=>{
+    if(st!=='ALL'&&r.status!==st) return false;
+    if(q){const hay=[(r.txn_id||''),(r.ref_id||''),(r.txn_amount||''),(r.settle_amount||''),(r.created_at||''),(r.settled_at||'')].join(' ').toLowerCase();if(!hay.includes(q))return false;}
+    return true;
+  });
+  const cols=['txn_id','txn_amount','created_at','ref_id','settle_amount','settled_at','diff','status'];
+  const lines=[cols.join(','),...rows.map(r=>cols.map(c=>{const v=r[c]??'';return String(v).includes(',')?`"${v}"`:v;}).join(','))];
+  dl(lines.join('\n'),'full_ledger.csv');
+}
+
+/* ── util ── */
+function dl(text, filename){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));
+  a.download=filename; a.click();
+}
+
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+  File "d:\hackthon\ONELAB\app.py", line 9
+    HTML = b"""<!DOCTYPE html>
+           ^^^^^^^^^^^^^^^^^^^
+SyntaxError: bytes can only contain ASCII literal characters

@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+_upload_txn.csv
+_upload_set.csv
+.pytest_cache/
